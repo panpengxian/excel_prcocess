@@ -5,21 +5,31 @@ class read_excel():
         sheet=book.sheets()[index]
         return sheet
 
-def get_data_dir():
-    if Judge[-3] in desired_fulloads:
-        dir2 = {}
-        for desired_fulload in desired_fulloads:
-            if desired_fulload in Judge:
-                dir3 = {}
-                current_fulload = desired_fulload
-                for Order in Desired_Orders:
-                    for i in range(14, a.nrows):
-                        if a.cell(i, 0).value == Order:
-                            desired_row = i
-                            desired_value = a.cell(desired_row, 1).value#读取当前列的数据
-                            dir3[Order] = desired_value
-                dir2[current_fulload] = dir3
-                write_data_to_excel(dir2,delta_col)
+def get_order_value():
+    order_value = []
+    for order in Desired_Orders:
+        for i in range(14, a.nrows):
+            if a.cell(i, 0) == order:
+                desired_value = a.cell(i, 1).value
+                order_value.append([order, desired_value])
+    return order_value
+
+def get_data_dict():
+    list_to_dict=[]
+    for fulload in desired_fulloads:
+        if fulload in title.split('_'):
+            order_value = []
+            for order in Desired_Orders:
+                print(a.nrows)
+                for i in range(14, a.nrows):
+                    if a.cell(i, 0).value == order:
+                        desired_value = a.cell(i, 1).value
+                        print(desired_value)
+                        order_value.append([order, desired_value])
+            Order_value_dict=dict(order_value)
+            list_to_dict.append([fulload,Order_value_dict])
+    data_dict=dict(list_to_dict)
+    write_to_excel(data_dict,delta_col)
 
 def input_orders(Input_Orders,Default_Orders=[1,2,3,4,5]):
     if Input_Orders=='':
@@ -39,36 +49,26 @@ def input_fulloads(Input_fulloads,Default_fulloads=['0%', '20%', '40%', '60%', '
         return Desired_fulloads
 
 
-def write_data_to_excel(dir2,delta_col):
-    for fulload, vlue in dir2.items():
+def write_to_excel(data_dict,delta_col):
+    for fulload, order_value in data_dict.items():
         for k in range(0, desired_fulloads_Len):
             if desired_fulloads[k] == fulload:
                 row = -(k - desired_fulloads_Len)
-        for order, value in vlue.items():
-            # print(current_direction, fulload, order, value)
+        for order, value in order_value.items():
             for m in range(0, Desired_Order_Len):
                 if Desired_Orders[m] == order:
                     col = m + delta_col
                     sheet1.write(row, col, value)
 
-def check_direction(Judge):
-    if 'CCW.hdf' in Judge:
-        current_direction = 'CCW'
-    elif 'CW.hdf'in Judge or 'CW1.hdf' in Judge:#为了这个我要疯
-        current_direction = 'CW'
-    else:
-        current_direction = 'CCW'
-    return current_direction
+
 
 #输入文件目录地址
 file_path=input('请按照X:/XXX/XXX的格式粘贴文件所在目录:')
 #获取文件夹下文件数量
 for root,dirs,file in os.walk(file_path):
-
+    global file_list
     file_list=file
-    global file_number
-    file_number=len(file_list)
-    print ('file number=',file_number)
+
 #阶次
 Desired_Orders=input('输入阶次(以逗号隔开):')
 Desired_Orders=input_orders(Desired_Orders)
@@ -77,6 +77,7 @@ Desired_Order_Len=int(len(Desired_Orders))
 Desired_fulloads=input('输入负载(以逗号隔开):')
 desired_fulloads=input_fulloads(Desired_fulloads)
 desired_fulloads_Len=int(len(desired_fulloads))
+print(desired_fulloads)
 #创建excel
 book = xlwt.Workbook(encoding='utf-8')
 sheet1 = book.add_sheet('sheet1')
@@ -92,24 +93,28 @@ for j in range(0,Desired_Order_Len):
     sheet1.write(0,j+1,Desired_Orders[j])
     sheet1.write(0,j+2+Desired_Order_Len,Desired_Orders[j])
 
-for i in range(1,int(file_number)+1):#根据文件数量读取文件
-    path=file_path+'.'+str(i)+'.xlsx'#读取文件路径
+for file_name in file_list:#根据文件数量读取文件
+    # print (file_name)
+    path=file_path+'\\'+file_name#读取文件路径
+    # print(path)
     a=read_excel().read(path)
-    title=a.cell(3,1).value
-    Judge=title.split("_")
-    current_direction=check_direction(Judge)
-    if current_direction == 'CCW':
-        delta_col=1
-        get_data_dir()
-    if current_direction == 'CW':
-        delta_col=2+Desired_Order_Len
-        get_data_dir()
+    title=a.cell(3,1).value#获取当前文件第4行第二列的内容
+    check_direction=title.find('CCW')#判断文件所指数据的转向
+    # print(check_direction)
+    if check_direction==-1:
+        current_direction = 'CW'
+        delta_col = 2 + Desired_Order_Len
+        get_data_dict()
+    else:
+        current_direction = 'CCW'
+        delta_col = 1
+        get_data_dict()
 save_name=input('请输入输出报告的文件名:')
-for root,dir,file in os.walk('D:/report/'):
-    global file_names
-    file_names=file
+for root,dir,files in os.walk('D:/report/'):
+    global report_files
+    report_files=files
 while True:
-    if save_name in file_names:
+    if save_name in report_files:
         print('文件名重复')
     else:
         book.save('D:/report/'+save_name+'.xls')
